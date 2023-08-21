@@ -1,12 +1,7 @@
 from flask import Flask, render_template, request, jsonify, flash
-import sqlite3
-import secrets
-import jwt
-import datetime
+from validators import is_valid_password, is_valid_email, email_exists, generate_secret_key
+import sqlite3, jwt, datetime
 from functools import wraps
-
-def generate_secret_key():
-    return secrets.token_hex(16)
 
 def create_table():
     conn = sqlite3.connect('users.db')
@@ -14,7 +9,7 @@ def create_table():
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
+            email TEXT NOT NULL,
             password TEXT NOT NULL
         )
     ''')
@@ -51,58 +46,67 @@ def token_required(f):
 def home():
     return render_template('index.html')
 
-users = {}
-
 @app.route('/signup')
 def signup_page():
     return render_template('signup.html')
 
 @app.route('/signup', methods=['POST'])
 def signup():
-    username = request.form['username']
+    email = request.form['email']
     password = request.form['password']
+    
+    if not is_valid_email(email):
+        flash('Invalid email format.', 'error')
+        return render_template('signup.html', error='Invalid email format.')
+    
+    if not is_valid_password(password):
+        flash('Password must have at least 8 characters.', 'error')
+        return render_template('signup.html', error='Password must have at least 8 characters!')
 
+    if (email_exists(email)):
+       flash('Invalid username or password.', 'error')
+       return render_template('signup.html', error='Username already exists!')
+    
     # Add the new user to the users dictionary.
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
+    c.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, password))
     conn.commit()
     conn.close()
 
     # Add code for successful sign-up (e.g., redirect to a success page).
-    return f"Congratulations, {username}! You are now signed up!"
+    return f"Congratulations, {email}! You are now signed up!"
 
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form['username']
+    email = request.form['email']
     password = request.form['password']
 
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute('SELECT * FROM users WHERE username=? AND password=?', (username, password))
+    c.execute('SELECT * FROM users WHERE email=? AND password=?', (email, password))
     user = c.fetchone()
     conn.close()
 
     if user:
         # Implement your user authentication logic here
         # For example, you could store the user ID in a session and redirect to a user dashboard
-        token = jwt.encode({'username': username, 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)},
+        token = jwt.encode({'username': email, 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)},
                            app.config['JWT_SECRET_KEY'], algorithm='HS256')
         return jsonify({'token': token})
     else:
         flash('Invalid username or password.', 'error')
         return render_template('index.html', error='Invalid username or password.')
 
-@app.route('/chat', methods=['GET'])
-@token_required
-def chat(current_user):
-    return f'Welcome to the chat page, {current_user}!'
-
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
-        email_or_username = request.form['email_or_username']
+        email = request.form['email']
+
+        if (email_exists(email) == False):
+            flash('Username does not exist', 'error')
+            return render_template('forgotpassword.html', error='Username does not exist!')
 
         return "Password reset link sent to your email address."
 
