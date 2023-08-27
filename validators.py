@@ -1,5 +1,31 @@
-import re
-import sqlite3, secrets
+import re, sqlite3, secrets
+
+def create_login_table():
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            password TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def create_user_details_table():
+    conn = sqlite3.connect('userDetails.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS userDetails (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            position TEXT NOT NULL,
+            manager TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
 def generate_secret_key():
     return secrets.token_hex(16)

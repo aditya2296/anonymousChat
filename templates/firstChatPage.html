@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <title>User First Time Details</title>
+</head>
+<body>
+    <div class="container">
+        <h1 class = "secure-speak">Secure Speak</h1>
+        <h2>Enter Details</h2>
+        <form action="/userDetails" method="post">
+            <input class="input" type="text" name="Anonymous Username" placeholder="Anonymous Username" autocomplete="off" required>
+            <input class="input" type="text" name="Position" placeholder="Position" autocomplete="off" required>
+            <input class="input" type="text" name="Manager" placeholder="Manager" autocomplete="off" required>
+            <button class="button" type="submit">Finish</button>
+        </form>
+        {% if error %}
+            <p class="error-message">{{ error }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>
