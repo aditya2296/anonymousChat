@@ -1,23 +1,11 @@
 from flask import Flask, render_template, request, jsonify, flash
-from validators import is_valid_password, is_valid_email, email_exists, generate_secret_key
+from validators import is_valid_password, is_valid_email, email_exists, generate_secret_key, create_login_table, create_user_details_table
 import sqlite3, jwt, datetime
 from functools import wraps
 from flask_bcrypt import Bcrypt
 
-def create_table():
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT NOT NULL,
-            password TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-create_table()
+create_login_table()
+create_user_details_table()
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = generate_secret_key()
@@ -78,7 +66,7 @@ def signup():
     conn.close()
 
     # Add code for successful sign-up (e.g., redirect to a success page).
-    return f"Congratulations, {email}! You are now signed up!"
+    return render_template('firstChatPage.html')
 
 
 @app.route('/login', methods=['POST'])
@@ -101,6 +89,20 @@ def login():
     else:
         flash('Invalid username or password.', 'error')
         return render_template('index.html', error='Invalid username or password.')
+
+@app.route('/userDetails', methods=['POST'])
+def userDetails():
+    username = request.form['Anonymous Username']
+    position = request.form['Position']
+    manager = request.form['Manager']
+
+    conn = sqlite3.connect('userDetails.db')
+    c = conn.cursor()
+    c.execute('INSERT INTO userDetails (username, position, manager) VALUES (?, ?, ?)', (username, position, manager))
+    conn.commit()
+    conn.close()
+
+    return "User details saved"
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
