@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, flash
 from validators import is_valid_password, is_valid_email, email_exists, generate_secret_key
 import sqlite3, jwt, datetime
 from functools import wraps
+from flask_bcrypt import Bcrypt
 
 def create_table():
     conn = sqlite3.connect('users.db')
@@ -21,6 +22,7 @@ create_table()
 app = Flask(__name__, template_folder="templates")
 app.secret_key = generate_secret_key()
 app.config['JWT_SECRET_KEY'] = "jwtproject"
+bcrypt = Bcrypt(app)
 
 # JWT token required decorator
 def token_required(f):
@@ -67,10 +69,11 @@ def signup():
        flash('Invalid username or password.', 'error')
        return render_template('signup.html', error='Username already exists!')
     
+    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
     # Add the new user to the users dictionary.
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, password))
+    c.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, hashed_password))
     conn.commit()
     conn.close()
 
@@ -85,11 +88,11 @@ def login():
 
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute('SELECT * FROM users WHERE email=? AND password=?', (email, password))
+    c.execute('SELECT * FROM users WHERE email=?', (email,))
     user = c.fetchone()
     conn.close()
 
-    if user:
+    if user and bcrypt.check_password_hash(user[2], password):
         # Implement your user authentication logic here
         # For example, you could store the user ID in a session and redirect to a user dashboard
         token = jwt.encode({'username': email, 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)},
